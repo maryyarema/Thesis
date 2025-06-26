@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wardrobe Calendar</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #f0fff4 0%, #e0e7ff 100%);
+            margin: 0;
+            min-height: 100vh;
+            text-align: center;
+        }
+        h1 {
+            margin-top: 32px;
+            font-size: 2.2rem;
+            color: #2563eb;
+            letter-spacing: 1px;
+            font-weight: 700;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 32px;
+            margin: 32px auto 0 auto;
+            padding: 20px;
+            max-width: 1100px;
+            justify-items: center;
+        }
+        .day-card {
+            background: rgba(255,255,255,0.97);
+            border-radius: 24px;
+            box-shadow: 0 8px 32px rgba(52,144,220,0.12);
+            padding: 32px 18px 24px 18px;
+            text-align: center;
+            min-height: 410px;
+            width: 320px;
+            border: none;
+            transition: transform 0.22s, box-shadow 0.22s;
+            position: relative;
+            overflow: hidden;
+        }
+        .day-card::before {
+            content: "";
+            position: absolute;
+            top: -60px;
+            right: -60px;
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, #a7f3d0 0%, #60a5fa 100%);
+            opacity: 0.10;
+            border-radius: 50%;
+            z-index: 0;
+        }
+        .day-card:hover {
+            transform: translateY(-6px) scale(1.03);
+            box-shadow: 0 16px 48px rgba(52,144,220,0.18);
+            background: #fff;
+        }
+        .day-card h2 {
+            font-size: 1.25rem;
+            color: #2563eb;
+            margin-bottom: 18px;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 1px;
+            z-index: 1;
+            position: relative;
+        }
+        .item {
+            margin: 18px 0;
+            z-index: 1;
+            position: relative;
+        }
+        .item img {
+            width: 90px;
+            height: 90px;
+            border-radius: 16px;
+            object-fit: cover;
+            display: block;
+            margin: 0 auto 8px auto;
+            box-shadow: 0 2px 8px rgba(52,144,220,0.10);
+            background: #f0f9ff;
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+        .item img:hover {
+            transform: scale(1.06) rotate(-2deg);
+            box-shadow: 0 8px 24px rgba(52,144,220,0.18);
+        }
+        .item-title {
+            font-size: 1.08rem;
+            font-weight: 600;
+            color: #2563eb;
+        }
+        /* Center align the last row if odd */
+        .container > .day-card:last-child {
+            grid-column: 2;
+        }
+        /* Profile Dropdown */
+        #profileDropdown {
+            position: fixed;
+            top: 24px;
+            right: 40px;
+            z-index: 1003;
+            display: inline-block;
+        }
+        #profileDropdown img {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            cursor: pointer;
+            object-fit: cover;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+            border: 2px solid #fff;
+            transition: box-shadow 0.2s;
+        }
+        #profileDropdown img:hover {
+            box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+        }
+        #profileDropdownContent {
+            display: none;
+            position: absolute;
+            right: 0;
+            margin-top: 12px;
+            background: #fff;
+            min-width: 170px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+            z-index: 1004;
+            border-radius: 12px;
+            overflow: hidden;
+            animation: fadeIn 0.2s;
+        }
+        #profileDropdownContent a {
+            text-decoration: none;
+            color: #222;
+            padding: 14px 20px;
+            display: block;
+            font-size: 16px;
+            transition: background 0.2s;
+        }
+        #profileDropdownContent a:hover {
+            background: #f3f4f6;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px);}
+            to { opacity: 1; transform: translateY(0);}
+        }
+        @media (max-width: 1100px) {
+            .container {
+                grid-template-columns: 1fr 1fr;
+                gap: 24px;
+            }
+        }
+        @media (max-width: 700px) {
+            .container {
+                grid-template-columns: 1fr;
+                gap: 18px;
+                padding: 8px;
+            }
+            .day-card {
+                width: 98vw;
+                min-height: 340px;
+                padding: 18px 2vw 18px 2vw;
+            }
+        }
+    </style>
+    <script>
+        function toggleDropdown() {
+            const dropdown = document.getElementById("profileDropdownContent");
+            dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+        }
+        window.onclick = function(event) {
+            if (!event.target.matches('#profileDropdown img')) {
+                const dropdown = document.getElementById("profileDropdownContent");
+                if (dropdown && dropdown.style.display === "block") {
+                    dropdown.style.display = "none";
+                }
+            }
+        }
+    </script>
+</head>
+<body>
+    {{ sidebar | safe }}
+
+    <!-- Profile Dropdown -->
+    <div id="profileDropdown">
+        <img src="{{ profile_picture }}" alt="Profile Picture" onclick="toggleDropdown()">
+        <div id="profileDropdownContent">
+            <a href="/logout">Logout</a>
+        </div>
+    </div>
+
+    <!-- Calendar Title -->
+    <h1>Wardrobe Calendar</h1>
+
+    <!-- Calendar Grid -->
+    <div class="container">
+        {% for outfit in weekly_outfits %}
+        <div class="day-card">
+            <h2>{{ outfit.day }}</h2>
+
+            <!-- Shirt -->
+            {% if outfit.shirt %}
+            <div class="item">
+                <img src="{{ url_for('static', filename=outfit.shirt[4]) }}" alt="Shirt">
+                <div class="item-title">Shirt: {{ outfit.shirt[3] }}</div>
+            </div>
+            {% endif %}
+
+            <!-- Pants -->
+            {% if outfit.pant %}
+            <div class="item">
+                <img src="{{ url_for('static', filename=outfit.pant[4]) }}" alt="Pants">
+                <div class="item-title">Pants: {{ outfit.pant[3] }}</div>
+            </div>
+            {% endif %}
+
+            <!-- Shoes -->
+            {% if outfit.shoes %}
+            <div class="item">
+                <img src="{{ url_for('static', filename=outfit.shoes[4]) }}" alt="Shoes">
+                <div class="item-title">Shoes: {{ outfit.shoes[3] }}</div>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</body>
+</html>

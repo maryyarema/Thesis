@@ -1,0 +1,43 @@
+body { 
+    font-family: sans-serif; 
+    padding: 2em; 
+    max-width: 600px; 
+    margin: auto; 
+    background-color: #f8f9fa; /* Світлий фон */
+}
+body {
+    background-color: lightblue !important; /* Використовуємо !important для перевірки */
+}
+
+form { 
+    margin-bottom: 1.5em; 
+    background-color: white; 
+    padding: 20px; /* Додано відступи */
+    border-radius: 10px; /* Округлі кути */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Тінь */
+}
+
+label { 
+    display: block; 
+    margin-bottom: 1.5em; /* Більший простір */
+}
+
+input[type="file"] {
+    padding: 10px; 
+    border-radius: 5px; 
+    border: 1px solid #ccc; 
+    width: 100%; /* Ширина інпуту */
+}
+
+button { 
+    padding: 10px 20px; 
+    background-color: #28a745; /* Яскравий колір */
+    color: white; 
+    border: none; 
+    border-radius: 5px; 
+    cursor: pointer; 
+}
+
+button:hover { 
+    background-color: #218838; /* Темніший колір при наведенні */
+}

@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <title>Віртуальна примірка одягу</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gradient-to-br from-indigo-100 to-white min-h-screen">
+  <div class="max-w-3xl mx-auto mt-10 bg-white rounded-xl shadow-lg p-8">
+    <h2 class="text-2xl font-bold text-center text-indigo-700 mb-6">Віртуальна примірка одягу</h2>
+    <form id="tryonForm" method="post" enctype="multipart/form-data" class="space-y-8">
+      <!-- Вибір фото людини -->
+      <div>
+        <label class="block text-gray-700 font-semibold mb-2">Фото людини:</label>
+        <div class="flex space-x-4 overflow-x-auto pb-2 mb-2">
+          {% for person in people %}
+            <label class="cursor-pointer">
+              <input type="radio" name="person" value="{{ person.image_path }}" class="peer hidden" required>
+              <img src="{{ url_for('static', filename=person.image_path) }}" alt="{{ person.name }}"
+                   class="w-24 h-28 object-cover rounded-lg border-2 border-transparent peer-checked:border-indigo-500 peer-checked:shadow-lg transition">
+              <div class="text-center text-xs mt-1">{{ person.name }}</div>
+            </label>
+          {% endfor %}
+          <!-- Кнопка для завантаження нового фото людини -->
+          <label class="cursor-pointer flex flex-col items-center justify-center w-24 h-28 border-2 border-dashed border-indigo-300 rounded-lg hover:bg-indigo-50 transition">
+            <span class="text-2xl text-indigo-400">+</span>
+            <span class="text-xs mt-1 text-indigo-400">Додати</span>
+            <input type="file" name="person_upload" accept="image/*" class="hidden" id="personUploadInput">
+          </label>
+        </div>
+        <img id="personPreview" class="mx-auto mt-2 rounded-lg shadow max-w-xs hidden" alt="Прев'ю людини">
+      </div>
+      <!-- Вибір категорії одягу -->
+      <div>
+        <label class="block text-gray-700 font-semibold mb-2">Оберіть категорію одягу:</label>
+        <div class="flex space-x-2 mb-4">
+          {% for cat in categories %}
+            <button type="button" class="category-tab px-4 py-2 rounded bg-indigo-100 text-indigo-700 font-semibold"
+                    data-category="{{ cat }}">{{ cat }}</button>
+          {% endfor %}
+        </div>
+        <div id="clothesByCategory">
+          {% for cat in categories %}
+            <div class="clothes-list" data-category="{{ cat }}" {% if not loop.first %}style="display:none;"{% endif %}>
+              <div class="flex space-x-4 overflow-x-auto pb-2 mb-2">
+                {% for cloth in clothes if cloth.category == cat %}
+                  <label class="cursor-pointer">
+                    <input type="radio" name="cloth" value="{{ cloth.image_path }}" class="peer hidden" required>
+                    <img src="{{ url_for('static', filename=cloth.image_path) }}" alt="{{ cloth.name }}"
+                         class="w-24 h-28 object-cover rounded-lg border-2 border-transparent peer-checked:border-indigo-500 peer-checked:shadow-lg transition">
+                    <div class="text-center text-xs mt-1">{{ cloth.name }}</div>
+                  </label>
+                {% endfor %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+        <img id="clothPreview" class="mx-auto mt-2 rounded-lg shadow max-w-xs hidden" alt="Прев'ю одягу">
+      </div>
+      <!-- Вибір типу одягу -->
+      <div class="mb-4">
+        <label class="block text-gray-700 font-semibold mb-2">Що приміряти?</label>
+        <div class="flex space-x-4">
+          <label class="inline-flex items-center">
+            <input type="radio" name="cloth_type" value="upper" class="form-radio" checked>
+            <span class="ml-2">Верх (upper)</span>
+          </label>
+          <label class="inline-flex items-center">
+            <input type="radio" name="cloth_type" value="lower" class="form-radio">
+            <span class="ml-2">Низ (lower)</span>
+          </label>
+          <label class="inline-flex items-center">
+            <input type="radio" name="cloth_type" value="overall" class="form-radio">
+            <span class="ml-2">Сукня/комбінезон (overall)</span>
+          </label>
+        </div>
+      </div>
+      <button type="submit" class="w-full py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow hover:bg-indigo-700 transition">
+        Приміряти
+      </button>
+    </form>
+    <!-- Відображення результату -->
+    <div id="tryon-result">
+      {% if result_url %}
+        <div class="mt-8 text-center">
+          <h3 class="text-lg font-semibold text-indigo-700 mb-2">Результат:</h3>
+          <img src="{{ result_url }}" alt="Результат примірки" class="mx-auto rounded-lg shadow-lg max-w-xs">
+        </div>
+      {% endif %}
+      {% if error %}
+        <div class="mt-6 text-red-600 text-center">{{ error }}</div>
+      {% endif %}
+    </div>
+  </div>
+  <script>
+    // Категорії: перемикання вкладок
+    document.querySelectorAll('.category-tab').forEach(btn => {
+      btn.onclick = function() {
+        document.querySelectorAll('.clothes-list').forEach(div => div.style.display = 'none');
+        document.querySelector('.clothes-list[data-category="' + btn.dataset.category + '"]').style.display = '';
+        document.querySelectorAll('.category-tab').forEach(b => b.classList.remove('bg-indigo-600', 'text-white'));
+        btn.classList.add('bg-indigo-600', 'text-white');
+      }
+    });
+
+    // Прев'ю для людини
+    document.querySelectorAll('input[name="person"]').forEach(input => {
+      input.addEventListener('change', function() {
+        document.getElementById('personPreview').src = this.nextElementSibling.src;
+        document.getElementById('personPreview').classList.remove('hidden');
+        // Скидаємо завантажене фото, якщо вибрано з гардеробу
+        document.getElementById('personUploadInput').value = "";
+      });
+    });
+    // Прев'ю для одягу
+    document.querySelectorAll('input[name="cloth"]').forEach(input => {
+      input.addEventListener('change', function() {
+        document.getElementById('clothPreview').src = this.nextElementSibling.src;
+        document.getElementById('clothPreview').classList.remove('hidden');
+      });
+    });
+    // Завантаження нового фото людини
+    document.getElementById('personUploadInput').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const preview = document.getElementById('personPreview');
+        preview.src = URL.createObjectURL(file);
+        preview.classList.remove('hidden');
+        // Знімаємо вибір з radio-кнопок
+        document.querySelectorAll('input[name="person"]').forEach(r => r.checked = false);
+      }
+    });
+
+    // Асинхронна відправка форми та оновлення лише блоку результату
+    document.getElementById('tryonForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const form = e.target;
+      const formData = new FormData(form);
+
+      // Показати лоадер
+      document.getElementById('tryon-result').innerHTML = '<div class="text-indigo-600">Зачекайте, йде примірка...</div>';
+
+      const response = await fetch(window.location.pathname, {
+        method: 'POST',
+        body: formData,
+        headers: {'X-Requested-With': 'XMLHttpRequest'}
+      });
+
+      if (response.ok) {
+        const html = await response.text();
+        document.getElementById('tryon-result').innerHTML = html;
+      } else {
+        document.getElementById('tryon-result').innerHTML = '<div class="text-red-600">Помилка примірки!</div>';
+      }
+    });
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <title>Віртуальна примірка одягу</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gradient-to-br from-indigo-100 to-white min-h-screen">
+  <div class="max-w-3xl mx-auto mt-10 bg-white rounded-xl shadow-lg p-8">
+    <h2 class="text-2xl font-bold text-center text-indigo-700 mb-6">Віртуальна примірка одягу</h2>
+    <form id="tryonForm" method="post" enctype="multipart/form-data" class="space-y-8">
+      <!-- Вибір фото людини -->
+      <div>
+        <label class="block text-gray-700 font-semibold mb-2">Фото людини:</label>
+        <div class="flex space-x-4 overflow-x-auto pb-2 mb-2">
+          {% for person in people %}
+            <label class="cursor-pointer">
+              <input type="radio" name="person" value="{{ person.image_path }}" class="peer hidden" required>
+              <img src="{{ url_for('static', filename=person.image_path) }}" alt="{{ person.name }}"
+                   class="w-24 h-28 object-cover rounded-lg border-2 border-transparent peer-checked:border-indigo-500 peer-checked:shadow-lg transition">
+              <div class="text-center text-xs mt-1">{{ person.name }}</div>
+            </label>
+          {% endfor %}
+          <!-- Кнопка для завантаження нового фото людини -->
+          <label class="cursor-pointer flex flex-col items-center justify-center w-24 h-28 border-2 border-dashed border-indigo-300 rounded-lg hover:bg-indigo-50 transition">
+            <span class="text-2xl text-indigo-400">+</span>
+            <span class="text-xs mt-1 text-indigo-400">Додати</span>
+            <input type="file" name="person_upload" accept="image/*" class="hidden" id="personUploadInput">
+          </label>
+        </div>
+        <img id="personPreview" class="mx-auto mt-2 rounded-lg shadow max-w-xs hidden" alt="Прев'ю людини">
+      </div>
+      <!-- Вибір категорії одягу -->
+      <div>
+        <label class="block text-gray-700 font-semibold mb-2">Оберіть категорію одягу:</label>
+        <div class="flex space-x-2 mb-4">
+          {% for cat in categories %}
+            <button type="button" class="category-tab px-4 py-2 rounded bg-indigo-100 text-indigo-700 font-semibold"
+                    data-category="{{ cat }}">{{ cat }}</button>
+          {% endfor %}
+        </div>
+        <div id="clothesByCategory">
+          {% for cat in categories %}
+            <div class="clothes-list" data-category="{{ cat }}" {% if not loop.first %}style="display:none;"{% endif %}>
+              <div class="flex space-x-4 overflow-x-auto pb-2 mb-2">
+                {% for cloth in clothes if cloth.category == cat %}
+                  <label class="cursor-pointer">
+                    <input type="radio" name="cloth" value="{{ cloth.image_path }}" class="peer hidden" required>
+                    <img src="{{ url_for('static', filename=cloth.image_path) }}" alt="{{ cloth.name }}"
+                         class="w-24 h-28 object-cover rounded-lg border-2 border-transparent peer-checked:border-indigo-500 peer-checked:shadow-lg transition">
+                    <div class="text-center text-xs mt-1">{{ cloth.name }}</div>
+                  </label>
+                {% endfor %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+        <img id="clothPreview" class="mx-auto mt-2 rounded-lg shadow max-w-xs hidden" alt="Прев'ю одягу">
+      </div>
+      <!-- Вибір типу одягу -->
+      <div class="mb-4">
+        <label class="block text-gray-700 font-semibold mb-2">Що приміряти?</label>
+        <div class="flex space-x-4">
+          <label class="inline-flex items-center">
+            <input type="radio" name="cloth_type" value="upper" class="form-radio" checked>
+            <span class="ml-2">Верх (upper)</span>
+          </label>
+          <label class="inline-flex items-center">
+            <input type="radio" name="cloth_type" value="lower" class="form-radio">
+            <span class="ml-2">Низ (lower)</span>
+          </label>
+          <label class="inline-flex items-center">
+            <input type="radio" name="cloth_type" value="overall" class="form-radio">
+            <span class="ml-2">Сукня/комбінезон (overall)</span>
+          </label>
+        </div>
+      </div>
+      <!-- Додатковий блок для комбінації одягу -->
+      <div id="comboTryonBlock" style="display:none;">
+        <div class="flex flex-row gap-8 justify-center">
+          <!-- Вибір верхнього одягу (shirt) -->
+          <div class="w-56 bg-white rounded-xl shadow p-4 flex flex-col items-center">
+            <div class="font-semibold text-indigo-700 mb-2">Верхній одяг (shirt)</div>
+            <div id="comboUpperList" class="flex flex-col space-y-2 w-full items-center">
+              {% for cloth in clothes if cloth.category == 'shirt' %}
+                <label class="cursor-pointer flex flex-col items-center gap-1 w-full">
+                  <input type="radio" name="combo_upper" value="{{ cloth.image_path }}" class="peer" required>
+                  <img src="{{ url_for('static', filename=cloth.image_path) }}" alt="{{ cloth.name }}"
+                       class="w-24 h-28 object-cover rounded-lg border-2 border-transparent peer-checked:border-indigo-500 transition">
+                  <span class="text-xs text-center">{{ cloth.name }}</span>
+                </label>
+              {% endfor %}
+            </div>
+            <div class="mt-3">
+              <img id="previewUpper" class="rounded-lg shadow max-w-[96px] max-h-[112px] hidden" alt="Вибраний верхній одяг">
+            </div>
+          </div>
+          <!-- Вибір нижнього одягу (pants) -->
+          <div class="w-56 bg-white rounded-xl shadow p-4 flex flex-col items-center">
+            <div class="font-semibold text-indigo-700 mb-2">Нижній одяг (pants)</div>
+            <div id="comboLowerList" class="flex flex-col space-y-2 w-full items-center">
+              {% for cloth in clothes if cloth.category == 'pants' %}
+                <label class="cursor-pointer flex flex-col items-center gap-1 w-full">
+                  <input type="radio" name="combo_lower" value="{{ cloth.image_path }}" class="peer" required>
+                  <img src="{{ url_for('static', filename=cloth.image_path) }}" alt="{{ cloth.name }}"
+                       class="w-24 h-28 object-cover rounded-lg border-2 border-transparent peer-checked:border-indigo-500 transition">
+                  <span class="text-xs text-center">{{ cloth.name }}</span>
+                </label>
+              {% endfor %}
+            </div>
+            <div class="mt-3">
+              <img id="previewLower" class="rounded-lg shadow max-w-[96px] max-h-[112px] hidden" alt="Вибраний нижній одяг">
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Селектор режиму примірки -->
+      <div class="mb-4">
+        <label class="block font-semibold mb-2">Режим примірки:</label>
+        <select id="tryonMode" name="tryon_mode" class="border rounded px-3 py-2">
+          <option value="single">Один предмет</option>
+          <option value="combo">Комбінація (верх + низ)</option>
+        </select>
+      </div>
+      <button type="submit" class="w-full py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow hover:bg-indigo-700 transition">
+        Приміряти
+      </button>
+    </form>
+    <!-- Відображення результату -->
+    <div id="tryon-result">
+      {% if result_url %}
+        <div class="mt-8 text-center">
+          <h3 class="text-lg font-semibold text-indigo-700 mb-2">Результат:</h3>
+          <img src="{{ result_url }}" alt="Результат примірки" class="mx-auto rounded-lg shadow-lg max-w-xs">
+        </div>
+      {% endif %}
+      {% if error %}
+        <div class="mt-6 text-red-600 text-center">{{ error }}</div>
+      {% endif %}
+    </div>
+  </div>
+  <script>
+    // Категорії: перемикання вкладок
+    document.querySelectorAll('.category-tab').forEach(btn => {
+      btn.onclick = function() {
+        document.querySelectorAll('.clothes-list').forEach(div => div.style.display = 'none');
+        document.querySelector('.clothes-list[data-category="' + btn.dataset.category + '"]').style.display = '';
+        document.querySelectorAll('.category-tab').forEach(b => b.classList.remove('bg-indigo-600', 'text-white'));
+        btn.classList.add('bg-indigo-600', 'text-white');
+      }
+    });
+
+    // Прев'ю для людини
+    document.querySelectorAll('input[name="person"]').forEach(input => {
+      input.addEventListener('change', function() {
+        document.getElementById('personPreview').src = this.nextElementSibling.src;
+        document.getElementById('personPreview').classList.remove('hidden');
+        // Скидаємо завантажене фото, якщо вибрано з гардеробу
+        document.getElementById('personUploadInput').value = "";
+      });
+    });
+    // Прев'ю для одягу
+    document.querySelectorAll('input[name="cloth"]').forEach(input => {
+      input.addEventListener('change', function() {
+        document.getElementById('clothPreview').src = this.nextElementSibling.src;
+        document.getElementById('clothPreview').classList.remove('hidden');
+      });
+    });
+    // Завантаження нового фото людини
+    document.getElementById('personUploadInput').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const preview = document.getElementById('personPreview');
+        preview.src = URL.createObjectURL(file);
+        preview.classList.remove('hidden');
+        // Знімаємо вибір з radio-кнопок
+        document.querySelectorAll('input[name="person"]').forEach(r => r.checked = false);
+      }
+    });
+
+    // Асинхронна відправка форми та оновлення лише блоку результату
+    document.getElementById('tryonForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const form = e.target;
+      const formData = new FormData(form);
+
+      // Показати лоадер
+      document.getElementById('tryon-result').innerHTML = '<div class="text-indigo-600">Зачекайте, йде примірка...</div>';
+
+      const response = await fetch(window.location.pathname, {
+        method: 'POST',
+        body: formData,
+        headers: {'X-Requested-With': 'XMLHttpRequest'}
+      });
+
+      if (response.ok) {
+        const html = await response.text();
+        document.getElementById('tryon-result').innerHTML = html;
+      } else {
+        document.getElementById('tryon-result').innerHTML = '<div class="text-red-600">Помилка примірки!</div>';
+      }
+    });
+
+    // Перемикання режиму
+    const modeSelect = document.getElementById('tryonMode');
+    const comboBlock = document.getElementById('comboTryonBlock');
+    modeSelect.addEventListener('change', function() {
+      comboBlock.style.display = this.value === 'combo' ? '' : 'none';
+      // Можна сховати/показати блоки для single-режиму, якщо потрібно
+    });
+
+    // Прев'ю для верхнього одягу (shirt)
+    document.querySelectorAll('input[name="combo_upper"]').forEach(input => {
+      input.addEventListener('change', function() {
+        const img = this.parentElement.querySelector('img');
+        const preview = document.getElementById('previewUpper');
+        preview.src = img.src;
+        preview.classList.remove('hidden');
+      });
+    });
+    // Прев'ю для нижнього одягу (pants)
+    document.querySelectorAll('input[name="combo_lower"]').forEach(input => {
+      input.addEventListener('change', function() {
+        const img = this.parentElement.querySelector('img');
+        const preview = document.getElementById('previewLower');
+        preview.src = img.src;
+        preview.classList.remove('hidden');
+      });
+    });
+
+    // Submit-обробник для комбінації
+    document.getElementById('tryonForm').addEventListener('submit', async function(e) {
+      const mode = modeSelect.value;
+      if (mode !== 'combo') return; // Дайте працювати вашій існуючій логіці для single
+
+      e.preventDefault();
+      const resultDiv = document.getElementById('tryon-result');
+      resultDiv.innerHTML = '<div class="text-indigo-600">Зачекайте, йде примірка...</div>';
+
+      // Зчитування фото людини
+      let personFile = document.querySelector('input[name="person_upload"]')?.files[0];
+      let personRadio = document.querySelector('input[name="person"]:checked');
+      let personBlob, personName;
+      if (personFile) {
+        personBlob = personFile;
+        personName = personFile.name;
+      } else if (personRadio) {
+        const resp = await fetch(personRadio.value);
+        personBlob = await resp.blob();
+        personName = personRadio.value.split('/').pop();
+      } else {
+        resultDiv.innerHTML = '<div class="text-red-600">Оберіть фото людини!</div>';
+        return;
+      }
+
+      // Комбінація (верх + низ)
+      let upperRadio = document.querySelector('input[name="combo_upper"]:checked');
+      let lowerRadio = document.querySelector('input[name="combo_lower"]:checked');
+      if (!upperRadio) {
+        resultDiv.innerHTML = '<div class="text-red-600">Оберіть верхній одяг!</div>';
+        return;
+      }
+      if (!lowerRadio) {
+        resultDiv.innerHTML = '<div class="text-red-600">Оберіть нижній одяг!</div>';
+        return;
+      }
+      // Верхній одяг
+      const respUpper = await fetch('/static/' + upperRadio.value);
+      const upperBlob = await respUpper.blob();
+      const upperName = upperRadio.value.split('/').pop();
+
+      // Нижній одяг
+      const respLower = await fetch('/static/' + lowerRadio.value);
+      const lowerBlob = await respLower.blob();
+      const lowerName = lowerRadio.value.split('/').pop();
+
+      // Перший запит: person + upper
+      let formData1 = new FormData();
+      formData1.append('person', personBlob, personName);
+      formData1.append('cloth', upperBlob, upperName);
+
+      let resp1 = await fetch('/tryon?cloth_type=upper', {
+        method: 'POST',
+        body: formData1
+      });
+      if (!resp1.ok) {
+        resultDiv.innerHTML = '<div class="text-red-600">Помилка примірки (верх)!</div>';
+        return;
+      }
+      let upperResultBlob = await resp1.blob();
+
+      // Другий запит: image_with_upper + lower
+      let formData2 = new FormData();
+      formData2.append('person', upperResultBlob, 'upper_result.png');
+      formData2.append('cloth', lowerBlob, lowerName);
+
+      let resp2 = await fetch('/tryon?cloth_type=lower', {
+        method: 'POST',
+        body: formData2
+      });
+      if (!resp2.ok) {
+        resultDiv.innerHTML = '<div class="text-red-600">Помилка примірки (низ)!</div>';
+        return;
+      }
+      let finalImgBlob = await resp2.blob();
+
+      // Відображаємо фінальний результат
+      const url = URL.createObjectURL(finalImgBlob);
+      resultDiv.innerHTML = `
+        <div class="mt-8 text-center">
+          <h3 class="text-lg font-semibold text-indigo-700 mb-2">Результат:</h3>
+          <img src="${url}" alt="Результат примірки" class="mx-auto rounded-lg shadow-lg max-w-xs">
+        </div>
+      `;
+    });
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <title>Віртуальна примірка одягу</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gradient-to-br from-indigo-100 to-white min-h-screen">
+  <div class="max-w-3xl mx-auto mt-10 bg-white rounded-xl shadow-lg p-8">
+    <h2 class="text-2xl font-bold text-center text-indigo-700 mb-6">Віртуальна примірка одягу</h2>
+    <form id="tryonForm" method="post" enctype="multipart/form-data" class="space-y-8">
+      <!-- Вибір фото людини -->
+      <div>
+        <label class="block text-gray-700 font-semibold mb-2">Фото людини:</label>
+        <div class="flex space-x-4 overflow-x-auto pb-2 mb-2">
+          {% for person in people %}
+            <label class="cursor-pointer">
+              <input type="radio" name="person" value="{{ person.image_path }}" class="peer hidden" required>
+              <img src="{{ url_for('static', filename=person.image_path) }}" alt="{{ person.name }}"
+                   class="w-24 h-28 object-cover rounded-lg border-2 border-transparent peer-checked:border-indigo-500 peer-checked:shadow-lg transition">
+              <div class="text-center text-xs mt-1">{{ person.name }}</div>
+            </label>
+          {% endfor %}
+          <!-- Кнопка для завантаження нового фото людини -->
+          <label class="cursor-pointer flex flex-col items-center justify-center w-24 h-28 border-2 border-dashed border-indigo-300 rounded-lg hover:bg-indigo-50 transition">
+            <span class="text-2xl text-indigo-400">+</span>
+            <span class="text-xs mt-1 text-indigo-400">Додати</span>
+            <input type="file" name="person_upload" accept="image/*" class="hidden" id="personUploadInput">
+          </label>
+        </div>
+        <img id="personPreview" class="mx-auto mt-2 rounded-lg shadow max-w-xs hidden" alt="Прев'ю людини">
+      </div>
+      <!-- Вибір категорії одягу -->
+      <div>
+        <label class="block text-gray-700 font-semibold mb-2">Оберіть категорію одягу:</label>
+        <div class="flex space-x-2 mb-4">
+          {% for cat in categories %}
+            <button type="button" class="category-tab px-4 py-2 rounded bg-indigo-100 text-indigo-700 font-semibold"
+                    data-category="{{ cat }}">{{ cat }}</button>
+          {% endfor %}
+        </div>
+        <div id="clothesByCategory">
+          {% for cat in categories %}
+            <div class="clothes-list" data-category="{{ cat }}" {% if not loop.first %}style="display:none;"{% endif %}>
+              <div class="flex space-x-4 overflow-x-auto pb-2 mb-2">
+                {% for cloth in clothes if cloth.category == cat %}
+                  <label class="cursor-pointer">
+                    <input type="radio" name="cloth" value="{{ cloth.image_path }}" class="peer hidden" required>
+                    <img src="{{ url_for('static', filename=cloth.image_path) }}" alt="{{ cloth.name }}"
+                         class="w-24 h-28 object-cover rounded-lg border-2 border-transparent peer-checked:border-indigo-500 peer-checked:shadow-lg transition">
+                    <div class="text-center text-xs mt-1">{{ cloth.name }}</div>
+                  </label>
+                {% endfor %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+        <img id="clothPreview" class="mx-auto mt-2 rounded-lg shadow max-w-xs hidden" alt="Прев'ю одягу">
+      </div>
+      <!-- Вибір типу одягу -->
+      <div class="mb-4">
+        <label class="block text-gray-700 font-semibold mb-2">Що приміряти?</label>
+        <div class="flex space-x-4">
+          <label class="inline-flex items-center">
+            <input type="radio" name="cloth_type" value="upper" class="form-radio" checked>
+            <span class="ml-2">Верх (upper)</span>
+          </label>
+          <label class="inline-flex items-center">
+            <input type="radio" name="cloth_type" value="lower" class="form-radio">
+            <span class="ml-2">Низ (lower)</span>
+          </label>
+          <label class="inline-flex items-center">
+            <input type="radio" name="cloth_type" value="overall" class="form-radio">
+            <span class="ml-2">Сукня/комбінезон (overall)</span>
+          </label>
+        </div>
+      </div>
+      <!-- Додатковий блок для комбінації одягу -->
+      <div id="comboTryonBlock" style="display:none;">
+        <div class="flex flex-row gap-8 justify-center">
+          <!-- Вибір верхнього одягу (shirt) -->
+          <div class="w-56 bg-white rounded-xl shadow p-4 flex flex-col items-center">
+            <div class="font-semibold text-indigo-700 mb-2">Верхній одяг (shirt)</div>
+            <div id="comboUpperList" class="flex flex-col space-y-2 w-full items-center">
+              {% for cloth in clothes if cloth.category == 'shirt' %}
+                <label class="cursor-pointer flex flex-col items-center gap-1 w-full">
+                  <input type="radio" name="combo_upper" value="{{ cloth.image_path }}" class="peer" required>
+                  <img src="{{ url_for('static', filename=cloth.image_path) }}" alt="{{ cloth.name }}"
+                       class="w-24 h-28 object-cover rounded-lg border-2 border-transparent transition"
+                       onclick="this.previousElementSibling.checked = true; this.previousElementSibling.dispatchEvent(new Event('change'));">
+                  <span class="text-xs text-center">{{ cloth.name }}</span>
+                </label>
+              {% endfor %}
+            </div>
+            <div class="mt-3">
+              <img id="previewUpper" class="rounded-lg shadow max-w-[96px] max-h-[112px] hidden" alt="Вибраний верхній одяг">
+            </div>
+          </div>
+          <!-- Вибір нижнього одягу (pants) -->
+          <div class="w-56 bg-white rounded-xl shadow p-4 flex flex-col items-center">
+            <div class="font-semibold text-indigo-700 mb-2">Нижній одяг (pants)</div>
+            <div id="comboLowerList" class="flex flex-col space-y-2 w-full items-center">
+              {% for cloth in clothes if cloth.category == 'pants' %}
+                <label class="cursor-pointer flex flex-col items-center gap-1 w-full">
+                  <input type="radio" name="combo_lower" value="{{ cloth.image_path }}" class="peer" required>
+                  <img src="{{ url_for('static', filename=cloth.image_path) }}" alt="{{ cloth.name }}"
+                       class="w-24 h-28 object-cover rounded-lg border-2 border-transparent peer-checked:border-indigo-500 transition">
+                  <span class="text-xs text-center">{{ cloth.name }}</span>
+                </label>
+              {% endfor %}
+            </div>
+            <div class="mt-3">
+              <img id="previewLower" class="rounded-lg shadow max-w-[96px] max-h-[112px] hidden" alt="Вибраний нижній одяг">
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Селектор режиму примірки -->
+      <div class="mb-4">
+        <label class="block font-semibold mb-2">Режим примірки:</label>
+        <select id="tryonMode" name="tryon_mode" class="border rounded px-3 py-2">
+          <option value="single">Один предмет</option>
+          <option value="combo">Комбінація (верх + низ)</option>
+        </select>
+      </div>
+      <button type="submit" class="w-full py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow hover:bg-indigo-700 transition">
+        Приміряти
+      </button>
+    </form>
+    <!-- Відображення результату -->
+    <div id="tryon-result">
+      {% if result_url %}
+        <div class="mt-8 text-center">
+          <h3 class="text-lg font-semibold text-indigo-700 mb-2">Результат:</h3>
+          <img src="{{ result_url }}" alt="Результат примірки" class="mx-auto rounded-lg shadow-lg max-w-xs">
+        </div>
+      {% endif %}
+      {% if error %}
+        <div class="mt-6 text-red-600 text-center">{{ error }}</div>
+      {% endif %}
+    </div>
+  </div>
+  <script>
+    // Категорії: перемикання вкладок
+    document.querySelectorAll('.category-tab').forEach(btn => {
+      btn.onclick = function() {
+        document.querySelectorAll('.clothes-list').forEach(div => div.style.display = 'none');
+        document.querySelector('.clothes-list[data-category="' + btn.dataset.category + '"]').style.display = '';
+        document.querySelectorAll('.category-tab').forEach(b => b.classList.remove('bg-indigo-600', 'text-white'));
+        btn.classList.add('bg-indigo-600', 'text-white');
+      }
+    });
+
+    // Прев'ю для людини
+    document.querySelectorAll('input[name="person"]').forEach(input => {
+      input.addEventListener('change', function() {
+        document.getElementById('personPreview').src = this.nextElementSibling.src;
+        document.getElementById('personPreview').classList.remove('hidden');
+        // Скидаємо завантажене фото, якщо вибрано з гардеробу
+        document.getElementById('personUploadInput').value = "";
+      });
+    });
+    // Прев'ю для одягу
+    document.querySelectorAll('input[name="cloth"]').forEach(input => {
+      input.addEventListener('change', function() {
+        document.getElementById('clothPreview').src = this.nextElementSibling.src;
+        document.getElementById('clothPreview').classList.remove('hidden');
+      });
+    });
+    // Завантаження нового фото людини
+    document.getElementById('personUploadInput').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const preview = document.getElementById('personPreview');
+        preview.src = URL.createObjectURL(file);
+        preview.classList.remove('hidden');
+        // Знімаємо вибір з radio-кнопок
+        document.querySelectorAll('input[name="person"]').forEach(r => r.checked = false);
+      }
+    });
+
+    // Асинхронна відправка форми та оновлення лише блоку результату
+    document.getElementById('tryonForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const form = e.target;
+      const formData = new FormData(form);
+
+      // Показати лоадер
+      document.getElementById('tryon-result').innerHTML = '<div class="text-indigo-600">Зачекайте, йде примірка...</div>';
+
+      const response = await fetch(window.location.pathname, {
+        method: 'POST',
+        body: formData,
+        headers: {'X-Requested-With': 'XMLHttpRequest'}
+      });
+
+      if (response.ok) {
+        const html = await response.text();
+        document.getElementById('tryon-result').innerHTML = html;
+      } else {
+        document.getElementById('tryon-result').innerHTML = '<div class="text-red-600">Помилка примірки!</div>';
+      }
+    });
+
+    // Перемикання режиму
+    const modeSelect = document.getElementById('tryonMode');
+    const comboBlock = document.getElementById('comboTryonBlock');
+    modeSelect.addEventListener('change', function() {
+      comboBlock.style.display = this.value === 'combo' ? '' : 'none';
+      // Можна сховати/показати блоки для single-режиму, якщо потрібно
+    });
+
+    // Прев'ю для верхнього одягу (shirt)
+    document.querySelectorAll('input[name="combo_upper"]').forEach(input => {
+      input.addEventListener('change', function() {
+        const img = this.parentElement.querySelector('img');
+        const preview = document.getElementById('previewUpper');
+        preview.src = img.src;
+        preview.classList.remove('hidden');
+      });
+    });
+    // Прев'ю для нижнього одягу (pants)
+    document.querySelectorAll('input[name="combo_lower"]').forEach(input => {
+      input.addEventListener('change', function() {
+        const img = this.parentElement.querySelector('img');
+        const preview = document.getElementById('previewLower');
+        preview.src = img.src;
+        preview.classList.remove('hidden');
+      });
+    });
+
+    // Submit-обробник для комбінації
+    document.getElementById('tryonForm').addEventListener('submit', async function(e) {
+      const mode = modeSelect.value;
+      if (mode !== 'combo') return; // Дайте працювати вашій існуючій логіці для single
+
+      e.preventDefault();
+      const resultDiv = document.getElementById('tryon-result');
+      resultDiv.innerHTML = '<div class="text-indigo-600">Зачекайте, йде примірка...</div>';
+
+      // Зчитування фото людини
+      let personFile = document.querySelector('input[name="person_upload"]')?.files[0];
+      let personRadio = document.querySelector('input[name="person"]:checked');
+      let personBlob, personName;
+      if (personFile) {
+        personBlob = personFile;
+        personName = personFile.name;
+      } else if (personRadio) {
+        const resp = await fetch(personRadio.value);
+        personBlob = await resp.blob();
+        personName = personRadio.value.split('/').pop();
+      } else {
+        resultDiv.innerHTML = '<div class="text-red-600">Оберіть фото людини!</div>';
+        return;
+      }
+
+      // Комбінація (верх + низ)
+      let upperRadio = document.querySelector('input[name="combo_upper"]:checked');
+      let lowerRadio = document.querySelector('input[name="combo_lower"]:checked');
+      if (!upperRadio) {
+        resultDiv.innerHTML = '<div class="text-red-600">Оберіть верхній одяг!</div>';
+        return;
+      }
+      if (!lowerRadio) {
+        resultDiv.innerHTML = '<div class="text-red-600">Оберіть нижній одяг!</div>';
+        return;
+      }
+      // Верхній одяг
+      const respUpper = await fetch('/static/' + upperRadio.value);
+      const upperBlob = await respUpper.blob();
+      const upperName = upperRadio.value.split('/').pop();
+
+      // Нижній одяг
+      const respLower = await fetch('/static/' + lowerRadio.value);
+      const lowerBlob = await respLower.blob();
+      const lowerName = lowerRadio.value.split('/').pop();
+
+      // Перший запит: person + upper
+      let formData1 = new FormData();
+      formData1.append('person', personBlob, personName);
+      formData1.append('cloth', upperBlob, upperName);
+
+      let resp1 = await fetch('/tryon?cloth_type=upper', {
+        method: 'POST',
+        body: formData1
+      });
+      if (!resp1.ok) {
+        resultDiv.innerHTML = '<div class="text-red-600">Помилка примірки (верх)!</div>';
+        return;
+      }
+      let upperResultBlob = await resp1.blob();
+
+      // Другий запит: image_with_upper + lower
+      let formData2 = new FormData();
+      formData2.append('person', upperResultBlob, 'upper_result.png');
+      formData2.append('cloth', lowerBlob, lowerName);
+
+      let resp2 = await fetch('/tryon?cloth_type=lower', {
+        method: 'POST',
+        body: formData2
+      });
+      if (!resp2.ok) {
+        resultDiv.innerHTML = '<div class="text-red-600">Помилка примірки (низ)!</div>';
+        return;
+      }
+      let finalImgBlob = await resp2.blob();
+
+      // Відображаємо фінальний результат
+      const url = URL.createObjectURL(finalImgBlob);
+      resultDiv.innerHTML = `
+        <div class="mt-8 text-center">
+          <h3 class="text-lg font-semibold text-indigo-700 mb-2">Результат:</h3>
+          <img src="${url}" alt="Результат примірки" class="mx-auto rounded-lg shadow-lg max-w-xs">
+        </div>
+      `;
+    });
+    
+  </script>
+</body>
+</html>

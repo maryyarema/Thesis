@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Choose Outfit</title>
+    <style>
+        body {
+            background: linear-gradient(135deg, #e0e7ff 0%, #f0fff4 100%);
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 900px;
+            margin: 60px auto 0 auto;
+            background: rgba(255,255,255,0.97);
+            border-radius: 24px;
+            box-shadow: 0 8px 32px rgba(52,144,220,0.12);
+            padding: 40px 32px 32px 32px;
+        }
+        h2 {
+            text-align: center;
+            color: #2563eb;
+            font-size: 2.2rem;
+            margin-bottom: 32px;
+            letter-spacing: 1px;
+        }
+        .outfit-select {
+            display: flex;
+            justify-content: space-around;
+            gap: 24px;
+            flex-wrap: wrap;
+            margin-bottom: 32px;
+        }
+        .category-block {
+            flex: 1 1 220px;
+            min-width: 200px;
+            background: #f3f4f6;
+            border-radius: 16px;
+            padding: 18px 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            text-align: center;
+        }
+        .category-block h3 {
+            color: #2563eb;
+            font-size: 1.2rem;
+            margin-bottom: 12px;
+        }
+        .item-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            align-items: center;
+        }
+        .item-radio {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #fff;
+            border-radius: 10px;
+            padding: 8px 10px;
+            box-shadow: 0 2px 8px rgba(52,144,220,0.06);
+            cursor: pointer;
+            transition: box-shadow 0.2s;
+        }
+        .item-radio:hover {
+            box-shadow: 0 4px 16px rgba(52,144,220,0.12);
+        }
+        .item-radio img {
+            width: 56px;
+            height: 56px;
+            border-radius: 10px;
+            object-fit: cover;
+            background: #e0e7ff;
+        }
+        .item-radio input[type="radio"] {
+            accent-color: #2563eb;
+        }
+        .btn {
+            display: block;
+            margin: 32px auto 0 auto;
+            background: linear-gradient(90deg, #60a5fa 0%, #34d399 100%);
+            color: #fff;
+            padding: 14px 40px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(52,144,220,0.10);
+            transition: background 0.2s, transform 0.2s;
+        }
+        .btn:hover {
+            background: linear-gradient(90deg, #2563eb 0%, #059669 100%);
+            transform: translateY(-2px) scale(1.03);
+        }
+        .selected-outfit {
+            margin-top: 40px;
+            text-align: center;
+        }
+        .selected-outfit h3 {
+            color: #059669;
+            margin-bottom: 18px;
+        }
+        .selected-items {
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            flex-wrap: wrap;
+        }
+        .selected-item {
+            background: #f3f4f6;
+            border-radius: 14px;
+            padding: 14px 18px;
+            box-shadow: 0 2px 8px rgba(52,144,220,0.06);
+            text-align: center;
+        }
+        .selected-item img {
+            width: 70px;
+            height: 70px;
+            border-radius: 10px;
+            object-fit: cover;
+            margin-bottom: 8px;
+        }
+        .cloth-card {
+            display: inline-block;
+            width: 180px;
+            margin: 0 12px 24px 12px;
+            text-align: center;
+            background: #fff;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            transition: transform 0.2s;
+        }
+        .cloth-card:hover {
+            transform: translateY(-4px);
+        }
+        .cloth-card img {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+        .tryon-btn {
+            background: linear-gradient(90deg, #60a5fa 0%, #34d399 100%);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 16px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.2s;
+        }
+        .tryon-btn:hover {
+            background: linear-gradient(90deg, #2563eb 0%, #059669 100%);
+            transform: translateY(-2px);
+        }
+        /* Modal Styles */
+        #tryonModal {
+            display: none;
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.7);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        #tryonModal > div {
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            position: relative;
+        }
+        #tryonResultImg {
+            max-width: 400px;
+            max-height: 400px;
+        }
+        #tryonModal button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #333;
+            cursor: pointer;
+        }
+        @media (max-width: 900px) {
+            .container {
+                padding: 18px 4vw;
+            }
+            .outfit-select {
+                flex-direction: column;
+                gap: 18px;
+            }
+            .selected-items {
+                gap: 12px;
+            }
+            .cloth-card {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    {{ sidebar|safe }}
+    <div class="container">
+        <h2>Compose Your Outfit</h2>
+        <form method="POST">
+            <div class="outfit-select">
+                <!-- Shirt -->
+                <div class="category-block">
+                    <h3>Shirt</h3>
+                    <div class="item-list">
+                        {% for item in shirts %}
+                        <label class="item-radio">
+                            <input type="radio" name="shirt" value="{{ item[0] }}" {% if selected and selected.shirt and selected.shirt[0]==item[0] %}checked{% endif %}>
+                            <img src="{{ url_for('static', filename=item[4]) }}" alt="Shirt">
+                            {{ item[3] }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                <!-- Pants -->
+                <div class="category-block">
+                    <h3>Pants</h3>
+                    <div class="item-list">
+                        {% for item in pants %}
+                        <label class="item-radio">
+                            <input type="radio" name="pant" value="{{ item[0] }}" {% if selected and selected.pant and selected.pant[0]==item[0] %}checked{% endif %}>
+                            <img src="{{ url_for('static', filename=item[4]) }}" alt="Pants">
+                            {{ item[3] }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                <!-- Shoes -->
+                <div class="category-block">
+                    <h3>Shoes</h3>
+                    <div class="item-list">
+                        {% for item in shoes %}
+                        <label class="item-radio">
+                            <input type="radio" name="shoes" value="{{ item[0] }}" {% if selected and selected.shoes and selected.shoes[0]==item[0] %}checked{% endif %}>
+                            <img src="{{ url_for('static', filename=item[4]) }}" alt="Shoes">
+                            {{ item[3] }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            <button type="submit" class="btn">Show Outfit</button>
+        </form>
+        {% if selected %}
+        <div class="selected-outfit">
+            <h3>Your Selected Outfit</h3>
+            <div class="selected-items" style="flex-direction: column; align-items: center; gap: 32px;">
+                {% if selected.shirt %}
+                <div class="selected-item" style="background:#f3f4f6; border-radius:18px; padding:18px 22px; box-shadow:0 2px 8px rgba(52,144,220,0.08); text-align:center;">
+                    <img src="{{ url_for('static', filename=selected.shirt[4]) }}" alt="Shirt"
+                         style="width:120px; height:120px; border-radius:16px; object-fit:cover; margin-bottom:10px; box-shadow:0 4px 16px rgba(52,144,220,0.13); background:#e0e7ff;">
+                    <div style="font-size:1.15rem; color:#2563eb; font-weight:600;">{{ selected.shirt[3] }}</div>
+                </div>
+                {% endif %}
+                {% if selected.pant %}
+                <div class="selected-item" style="background:#f3f4f6; border-radius:18px; padding:18px 22px; box-shadow:0 2px 8px rgba(52,144,220,0.08); text-align:center;">
+                    <img src="{{ url_for('static', filename=selected.pant[4]) }}" alt="Pants"
+                         style="width:120px; height:120px; border-radius:16px; object-fit:cover; margin-bottom:10px; box-shadow:0 4px 16px rgba(52,144,220,0.13); background:#e0e7ff;">
+                    <div style="font-size:1.15rem; color:#2563eb; font-weight:600;">{{ selected.pant[3] }}</div>
+                </div>
+                {% endif %}
+                {% if selected.shoes %}
+                <div class="selected-item" style="background:#f3f4f6; border-radius:18px; padding:18px 22px; box-shadow:0 2px 8px rgba(52,144,220,0.08); text-align:center;">
+                    <img src="{{ url_for('static', filename=selected.shoes[4]) }}" alt="Shoes"
+                         style="width:120px; height:120px; border-radius:16px; object-fit:cover; margin-bottom:10px; box-shadow:0 4px 16px rgba(52,144,220,0.13); background:#e0e7ff;">
+                    <div style="font-size:1.15rem; color:#2563eb; font-weight:600;">{{ selected.shoes[3] }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Clothing Items for Try-On -->
+        <div class="clothing-items" style="margin-top: 40px;">
+            <h3 style="text-align: center; color: #2563eb; margin-bottom: 24px;">Available Clothing Items</h3>
+            <div class="cloth-card-container" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 24px;">
+                {% for cloth in clothes %}
+                <div class="cloth-card">
+                    <img src="{{ url_for('static', filename=cloth.image_path) }}" alt="{{ cloth.name }}">
+                    <div>{{ cloth.name }}</div>
+                    <button class="tryon-btn" 
+                            data-cloth="{{ url_for('static', filename=cloth.image_path) }}"
+                            data-person="{{ url_for('static', filename=person_image_path) }}">
+                      Приміряти
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Модальне вікно для результату -->
+        <div id="tryonModal" style="display:none; position:fixed; left:0; top:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); align-items:center; justify-content:center; z-index:1000;">
+          <div style="background:#fff; padding:20px; border-radius:10px; position:relative;">
+            <img id="tryonResultImg" src="" style="max-width:400px; max-height:400px;">
+            <button onclick="document.getElementById('tryonModal').style.display='none'" style="position:absolute;top:10px;right:10px;">✖</button>
+          </div>
+        </div>
+    </div>
+
+    <script>
+document.querySelectorAll('.tryon-btn').forEach(btn => {
+  btn.onclick = async function() {
+    const clothUrl = btn.getAttribute('data-cloth');
+    const personUrl = btn.getAttribute('data-person');
+    // Отримуємо абсолютні шляхи на сервері (Flask має знати їх)
+    // Для приклади, передаємо відносні шляхи у formData
+    const formData = new FormData();
+    formData.append('person_path', personUrl.replace(location.origin, '').replace('/', '', 1));
+    formData.append('cloth_path', clothUrl.replace(location.origin, '').replace('/', '', 1));
+
+    const modal = document.getElementById('tryonModal');
+    const img = document.getElementById('tryonResultImg');
+    img.src = '';
+    modal.style.display = 'flex';
+
+    try {
+      const resp = await fetch('/virtual-tryon', {
+        method: 'POST',
+        body: formData
+      });
+      if (resp.ok) {
+        const blob = await resp.blob();
+        img.src = URL.createObjectURL(blob);
+      } else {
+        img.alt = 'Помилка примірки';
+      }
+    } catch (e) {
+      img.alt = 'Помилка з\'єднання';
+    }
+  }
+});
+
+        // Close modal when clicking outside of the image
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('tryonModal');
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

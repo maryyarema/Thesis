@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Віртуальна примірка одягу</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
+  />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    #previewPerson, #previewCloth{
+      display: block;
+      margin: 12px auto 0 auto;
+      max-width: 220px;
+      max-height: 180px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(76, 60, 201, 0.08);
+    }
+    #result {
+  display: block;
+  margin: 20px auto 0 auto;
+  max-width: 600px;      /* Зробіть ширину більшою */
+  max-height: 500px;     /* Зробіть висоту більшою */
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(76, 60, 201, 0.15);
+}
+  </style>
+</head>
+<body class="bg-[#0f1323] text-white min-h-screen flex flex-col justify-center items-center px-4 py-12">
+
+  <div class="w-full max-w-5xl flex flex-col md:flex-row gap-6 md:gap-12 mb-10">
+    <form id="uploadForm" class="flex flex-col md:flex-row w-full gap-6 md:gap-12">
+      <label for="person" class="flex-1 border border-dashed border-gray-500 rounded-md p-6 flex flex-col items-center justify-center relative cursor-pointer">
+        <span class="text-gray-400 text-sm absolute top-2 left-4 select-none">Фото людини</span>
+        <i class="fas fa-image text-gray-500 text-3xl mb-3"></i>
+        <input type="file" id="person" name="person" accept="image/*" class="hidden" required>
+        <span class="inline-block bg-white text-[#4c3cc9] font-semibold text-sm rounded-full px-4 py-1 cursor-pointer select-none">Вибрати файл</span>
+        <span class="text-gray-400 text-sm ml-3 select-none">Файл не вибрано</span>
+        <span class="text-gray-500 text-xs mt-2 select-none">PNG, JPG до 10MB</span>
+        <span class="text-gray-600 text-xs absolute right-4 top-10 select-none">або перетягніть сюди</span>
+        <img id="previewPerson" alt="Фото людини" style="display:none;">
+      </label>
+
+      <label for="cloth" class="flex-1 border border-dashed border-gray-500 rounded-md p-6 flex flex-col items-center justify-center relative cursor-pointer">
+        <span class="text-gray-400 text-sm absolute top-2 left-4 select-none">Фото одягу</span>
+        <i class="fas fa-image text-gray-500 text-3xl mb-3"></i>
+        <input type="file" id="cloth" name="cloth" accept="image/*" class="hidden" required>
+        <span class="inline-block bg-white text-[#4c3cc9] font-semibold text-sm rounded-full px-4 py-1 cursor-pointer select-none">Вибрати файл</span>
+        <span class="text-gray-400 text-sm ml-3 select-none">Файл не вибрано</span>
+        <span class="text-gray-500 text-xs mt-2 select-none">PNG, JPG до 10MB</span>
+        <span class="text-gray-600 text-xs absolute right-4 top-10 select-none">або перетягніть сюди</span>
+        <img id="previewCloth" alt="Фото одягу" style="display:none;">
+      </label>
+    </form>
+  </div>
+
+  <div class="text-center max-w-xl">
+    <h1 class="text-white text-xl md:text-2xl font-semibold mb-2">
+      Завантажте відповідні зображення та отримайте результат
+    </h1>
+    <p class="text-gray-500 text-sm mb-6">
+        Трохи магії в процесі, зачекайте 1-2 хвилини. Час перевірити меми в телефоні!
+    </p>
+    <button type="submit" form="uploadForm"
+      class="bg-gradient-to-b from-[#4c3cc9] to-[#2e2bbd] px-6 py-2 rounded-md text-white text-sm font-medium hover:brightness-110 transition">
+      Спробувати
+    </button>
+
+    <h3 class="text-[#4c3cc9] text-lg font-semibold mt-10 mb-2">Результат:</h3>
+    <img id="result" alt="Зображення результату з'явиться тут">
+  </div>
+
+  <script>
+    const personInput = document.getElementById('person');
+    const clothInput = document.getElementById('cloth');
+    const previewPerson = document.getElementById('previewPerson');
+    const previewCloth = document.getElementById('previewCloth');
+
+    personInput.addEventListener('change', () => {
+      const file = personInput.files[0];
+      if (file) {
+        previewPerson.src = URL.createObjectURL(file);
+        previewPerson.style.display = 'block';
+      }
+    });
+
+    clothInput.addEventListener('change', () => {
+      const file = clothInput.files[0];
+      if (file) {
+        previewCloth.src = URL.createObjectURL(file);
+        previewCloth.style.display = 'block';
+      }
+    });
+  </script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

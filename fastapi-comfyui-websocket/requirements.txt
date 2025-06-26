@@ -1,0 +1,6 @@
+FastAPI
+uvicorn
+websockets
+Pillow
+aiofiles
+aiohttp
